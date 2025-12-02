@@ -1,3 +1,4 @@
+<!DOCTYPE html>
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
@@ -10,7 +11,7 @@
         body { margin: 0; padding: 0; font-family: 'Helvetica Neue', Arial, sans-serif; }
         #map { height: 100vh; width: 100%; }
 
-        /* Titre */
+        /* --- Titre --- */
         #map-title {
             position: absolute;
             top: 20px;
@@ -27,7 +28,7 @@
         #map-title h1 { margin: 0; font-size: 18px; color: #c0392b; text-transform: uppercase; letter-spacing: 1px; }
         #map-title p { margin: 2px 0 0 0; font-size: 12px; color: #7f8c8d; }
 
-        /* Panneau Info */
+        /* --- Panneau Info (Survol) --- */
         .info {
             padding: 12px;
             font: 13px/16px Arial, Helvetica, sans-serif;
@@ -38,18 +39,75 @@
         }
         .info h4 { margin: 0 0 8px; color: #333; font-size: 16px; border-bottom: 2px solid #c0392b; padding-bottom: 5px; text-transform: uppercase; }
 
-        /* Tableaux */
+        /* --- Tableaux --- */
         .data-table { width: 100%; border-collapse: collapse; margin-top: 8px; }
         .data-table th { text-align: left; color: #777; font-size: 0.9em; border-bottom: 1px solid #ddd; padding-bottom: 4px; }
         .data-table td { padding: 4px 0; border-bottom: 1px solid #eee; }
         .val-zi { color: #c0392b; font-weight: bold; }
         .val-hors { color: #2d3436; }
 
-        /* Légende */
+        /* --- Légende --- */
         .legend { line-height: 20px; color: #555; background: rgba(255,255,255,0.9); padding: 10px; border-radius: 5px; box-shadow: 0 0 15px rgba(0,0,0,0.2); }
         .legend i { width: 18px; height: 18px; float: left; margin-right: 8px; opacity: 0.8; border: 1px solid #ccc; }
         
         .leaflet-control-layers { box-shadow: 0 2px 10px rgba(0,0,0,0.2); border-radius: 8px; }
+
+        /* --- NOUVEAU : STYLE DU POPUP D'INFORMATION (MODAL) --- */
+        .modal {
+            display: none; /* Caché par défaut */
+            position: fixed; 
+            z-index: 2000; /* Au dessus de la carte (Leaflet z-index max est souvent 1000) */
+            left: 0;
+            top: 0;
+            width: 100%; 
+            height: 100%; 
+            overflow: auto; 
+            background-color: rgba(0,0,0,0.5); /* Fond noir semi-transparent */
+            backdrop-filter: blur(2px); /* Petit effet de flou sympa */
+        }
+
+        .modal-content {
+            background-color: #fefefe;
+            margin: 10% auto; /* Centré verticalement */
+            padding: 25px;
+            border: 1px solid #888;
+            width: 80%;
+            max-width: 600px; /* Largeur max */
+            border-radius: 8px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+            font-family: 'Helvetica Neue', Arial, sans-serif;
+            line-height: 1.6;
+        }
+
+        .close-btn {
+            color: #aaa;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        .close-btn:hover, .close-btn:focus { color: black; text-decoration: none; cursor: pointer; }
+        
+        .modal-content h2 { margin-top: 0; color: #2c3e50; border-bottom: 2px solid #3498db; padding-bottom: 10px; }
+        .modal-content a { color: #3498db; text-decoration: none; }
+        .modal-content a:hover { text-decoration: underline; }
+        .modal-content ul { list-style-type: disc; margin-left: 20px; }
+
+        /* Style du bouton "?" sur la carte */
+        .leaflet-control-custom-info {
+            background: white;
+            width: 30px;
+            height: 30px;
+            border-radius: 4px;
+            box-shadow: 0 1px 5px rgba(0,0,0,0.65);
+            cursor: pointer;
+            text-align: center;
+            line-height: 30px;
+            font-weight: bold;
+            font-size: 18px;
+            color: #444;
+        }
+        .leaflet-control-custom-info:hover { background: #f4f4f4; color: black; }
     </style>
 </head>
 <body>
@@ -59,13 +117,36 @@
     <p>Comparaison socio-démographique (1999 - 2017)</p>
 </div>
 
+<div id="infoModal" class="modal">
+    <div class="modal-content">
+        <span class="close-btn" onclick="closeModal()">&times;</span>
+        <h2>Méthodologie & Sources</h2>
+        <p>Indicateurs de vulnérabilité sociale par unité urbaine et par année (1999, 2008 et 2017) en France métropolitaine, en fonction de l'exposition à l'aléa inondation.</p>
+        
+        <p><strong>L'aléa inondation</strong> est identifié à partir de la cartographie des Territoires à Risque important d'Inondation (BD TRI) rapportage 2020 (version 2), scénario moyen (~crue centennale).<br>
+        <a href="https://www.georisques.gouv.fr/donnees/bases-de-donnees/zonages-inondation-rapportage-2020" target="_blank">Source Géorisques</a></p>
+
+        <p><strong>Les indicateurs de vulnérabilité sociale</strong> sont les suivants :</p>
+        <ul>
+            <li>Taux de chômage (PCT_CHOM)</li>
+            <li>Part de la population étrangère (PCT_ETR)</li>
+            <li>Part des ménages propriétaires de leur logement (PCT_PROP)</li>
+        </ul>
+
+        <p><em>Données utilisées dans Fujiki & Finance (2022).<br>
+        <a href="https://doi.org/10.4000/cybergeo.39179" target="_blank">Voir l'article complet (Cybergeo)</a></em></p>
+        
+        <p style="font-size: 0.9em; color: #666;">Voir en particulier le Tableau 2 pour les données utilisées, et les Figures 3, 5, 6 & 7 pour la méthodologie utilisée et la cartographie issue de ces indicateurs.</p>
+    </div>
+</div>
+
 <div id="map"></div>
 
 <script type="text/javascript" src="inondation_1999_wgs84.json"></script>
 <script type="text/javascript" src="inondation_2008_wgs84.json"></script>
 <script type="text/javascript" src="inondation_2017_wgs84.json"></script>
 <script type="text/javascript" src="cours_eau.json"></script>
-    
+
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 
 <script>
@@ -87,7 +168,42 @@
 
     L.control.scale({ position: 'bottomleft', metric: true, imperial: false }).addTo(map);
 
-    // --- 2. STYLE & FUNCTIONS ---
+
+    // --- 2. BOUTON D'INFORMATION (NOUVEAU) ---
+    // Création d'un contrôle personnalisé Leaflet
+    var InfoControl = L.Control.extend({
+        options: {
+            position: 'topleft' // Juste en dessous du zoom
+        },
+
+        onAdd: function (map) {
+            var container = L.DomUtil.create('div', 'leaflet-bar leaflet-control leaflet-control-custom-info');
+            container.innerHTML = '?'; // Le symbole du bouton
+            container.title = "Informations et Sources";
+            
+            // Événement au clic
+            container.onclick = function(){
+                document.getElementById("infoModal").style.display = "block";
+            }
+            return container;
+        }
+    });
+    map.addControl(new InfoControl());
+
+    // Fonctions pour fermer le modal
+    function closeModal() {
+        document.getElementById("infoModal").style.display = "none";
+    }
+    // Fermer si on clique en dehors de la boite
+    window.onclick = function(event) {
+        var modal = document.getElementById("infoModal");
+        if (event.target == modal) {
+            modal.style.display = "none";
+        }
+    }
+
+
+    // --- 3. STYLE & FUNCTIONS ---
     function getColor(d) {
         return d > 0.50 ? '#800026' : 
                d > 0.25 ? '#BD0026' : 
@@ -123,7 +239,7 @@
         }
     } catch(e) {}
 
-    // --- INFO PANEL ---
+    // --- INFO PANEL (Survol) ---
     var info = L.control();
     info.onAdd = function (map) { this._div = L.DomUtil.create('div', 'info'); this.update(); return this._div; };
     info.update = function (props) {
@@ -161,11 +277,7 @@
 
     // --- CHARGEMENT DONNÉES AVEC FILTRE ---
     
-    // Fonction de filtrage commune pour ne pas afficher les données nulles
     function filterData(feature) {
-        // Retourne 'true' si PCT_EXPO n'est PAS null, 'false' sinon.
-        // Si vous voulez aussi cacher les 0%, utilisez : 
-        // return feature.properties.PCT_EXPO !== null && feature.properties.PCT_EXPO > 0;
         return feature.properties.PCT_EXPO !== null;
     }
 
@@ -175,7 +287,6 @@
         if (typeof INONDATION2017 === 'undefined') INONDATION2017 = {"type":"FeatureCollection","features":[]};
     } catch(e){}
 
-    // On ajoute l'option 'filter' ici
     var layer1999 = L.geoJSON(INONDATION1999, { style: style, onEachFeature: onEachFeature, filter: filterData });
     var layer2008 = L.geoJSON(INONDATION2008, { style: style, onEachFeature: onEachFeature, filter: filterData });
     var layer2017 = L.geoJSON(INONDATION2017, { style: style, onEachFeature: onEachFeature, filter: filterData });
@@ -184,7 +295,7 @@
     layer2017.addTo(map);
     map.fitBounds(layer2017.getBounds());
 
-    // --- 4. GESTION MENU COUCHES ---
+    // --- MENU COUCHES ---
     var baseMaps = {
         "ESRI Satellite": basemapSat,
         "Plan Gris (CartoDB)": basemapGris
@@ -201,7 +312,7 @@
     L.control.layers(baseMaps, overlayMaps, { collapsed: false, autoZIndex: false }).addTo(map);
 
 
-    // --- 5. LOGIQUE D'EXCLUSIVITÉ ---
+    // --- LOGIQUE D'EXCLUSIVITÉ ---
     map.on('overlayadd', function(e) {
         var years = [layer1999, layer2008, layer2017];
         var addedLayer = e.layer;
@@ -225,9 +336,6 @@
 
         div.innerHTML = '<h4>Part Pop. Exposée</h4>';
         
-        // J'ai retiré la ligne "0 ou N/A" de la légende car ces données sont maintenant masquées
-        // div.innerHTML += '<i style="background:#CCCCCC; border:1px solid #ccc"></i> 0 ou N/A<br>';
-
         for (var i = 0; i < grades.length; i++) {
             var label = (grades[i] * 100) + '%';
             var nextLabel = grades[i + 1] ? '&ndash;' + (grades[i + 1] * 100) + '%' : '+';
